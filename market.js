@@ -236,6 +236,8 @@ async function run() {
 
   for (const item of ITEMS_TO_WATCH) {
     const cat = getItemCategory(item.Name);
+    if (cat === 'crafting') continue; // IGNORAR CRAFTING
+
     const sub = getItemSubCategory(item.Name);
 
     // Map 'equipment' to 'equip' for display/grouping
