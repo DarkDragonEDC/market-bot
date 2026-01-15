@@ -1560,6 +1560,7 @@ export default [
         ]
     },
     {
+        "ID": "769",
         "Name": "Combat Exp Charm I",
         "Variants": [
             {
@@ -1589,6 +1590,7 @@ export default [
         ]
     },
     {
+        "ID": "770",
         "Name": "Combat Exp Charm II",
         "Variants": [
             {
@@ -1618,6 +1620,7 @@ export default [
         ]
     },
     {
+        "ID": "771",
         "Name": "Combat Exp Charm III",
         "Variants": [
             {
@@ -2007,6 +2010,7 @@ export default [
         ]
     },
     {
+        "ID": "785",
         "Name": "Critical Hit Potion",
         "Variants": [
             {
@@ -2036,6 +2040,7 @@ export default [
         ]
     },
     {
+        "ID": "786",
         "Name": "Defense Penetration Potion",
         "Variants": [
             {
@@ -6624,6 +6629,7 @@ export default [
         ]
     },
     {
+        "ID": "787",
         "Name": "Resource Efficiency Potion",
         "Variants": [
             {
@@ -8243,6 +8249,7 @@ export default [
         ]
     },
     {
+        "ID": "772",
         "Name": "Task Efficiency Potion I",
         "Variants": [
             {
@@ -8272,6 +8279,7 @@ export default [
         ]
     },
     {
+        "ID": "773",
         "Name": "Task Efficiency Potion II",
         "Variants": [
             {
@@ -8301,6 +8309,7 @@ export default [
         ]
     },
     {
+        "ID": "774",
         "Name": "Task Efficiency Potion III",
         "Variants": [
             {
