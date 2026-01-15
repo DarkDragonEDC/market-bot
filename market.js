@@ -237,7 +237,7 @@ async function run() {
 
   for (const item of ITEMS_TO_WATCH) {
     const cat = getItemCategory(item.Name);
-    if (cat === 'crafting') continue; // IGNORAR CRAFTING
+    if (cat === 'crafting' || cat === 'leatherworking') continue; // IGNORAR CRAFTING E LEATHERWORKING
 
     const sub = getItemSubCategory(item.Name);
 
