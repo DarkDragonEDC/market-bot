@@ -28,6 +28,7 @@ const CATEGORIES = {
   woodcraft: ['Plank', 'Charm']
 };
 
+
 const LEATHER_MATS = ['Leather', 'Thick', 'Sturdy', 'Heavy', 'Tough', 'Reinforced', 'Shadowhide', 'Dragonhide', 'Abyssal'];
 
 const EQUIPMENT_KEYWORDS = [
