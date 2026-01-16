@@ -237,12 +237,16 @@ async function run() {
 
   for (const item of ITEMS_TO_WATCH) {
     const cat = getItemCategory(item.Name);
-    if (cat === 'crafting' || cat === 'leatherworking') continue; // IGNORAR CRAFTING E LEATHERWORKING
-
     const sub = getItemSubCategory(item.Name);
 
     // Map 'equipment' to 'equip' for display/grouping
     const subDisplay = sub === 'equipment' ? 'equip' : sub;
+
+    // FILTROS IGNORADOS
+    if (cat === 'crafting' || cat === 'leatherworking') continue;
+    if (cat === 'forging' && subDisplay === 'equip') continue;
+    if (cat === 'tailoring' && subDisplay === 'equip') continue;
+
     const filterKey = `${cat} / ${subDisplay}`;
 
     if (!groups.has(filterKey)) groups.set(filterKey, []);
