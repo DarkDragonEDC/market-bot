@@ -347,6 +347,12 @@ async function run() {
 
         const sMsgId = await sendTelegram(summaryMsg);
         if (sMsgId) SUMMARY_MSG_IDS.set(filter, sMsgId);
+      } else {
+        // If NO items found for this filter, clean up old summary if exists
+        if (SUMMARY_MSG_IDS.has(filter)) {
+          await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
+          SUMMARY_MSG_IDS.delete(filter);
+        }
       }
     }
 
