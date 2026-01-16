@@ -13,6 +13,9 @@ let TOTAL_GASTO = 0;
 let TOTAL_XP = 0;
 let TOTAL_QTD = 0;
 
+const ITEM_MSG_IDS = new Map();
+const SUMMARY_MSG_IDS = new Map();
+
 // ================= CONSTANTS =================
 const CATEGORIES = {
   cooking: [
@@ -82,9 +85,9 @@ function fmt(n) {
 }
 
 async function sendTelegram(msg) {
-  if (!BOT_TOKEN || !CHAT_ID) return;
+  if (!BOT_TOKEN || !CHAT_ID) return null;
   try {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -93,8 +96,27 @@ async function sendTelegram(msg) {
         parse_mode: 'Markdown'
       })
     });
+    const json = await response.json();
+    return json.result ? json.result.message_id : null;
   } catch (e) {
-    console.log('Erro ao enviar Telegram');
+    console.log('Erro ao enviar Telegram:', e.message);
+    return null;
+  }
+}
+
+async function deleteTelegramMessage(msgId) {
+  if (!BOT_TOKEN || !CHAT_ID || !msgId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        message_id: msgId
+      })
+    });
+  } catch (e) {
+    console.log('Erro ao deletar msg Telegram:', e.message);
   }
 }
 
@@ -167,10 +189,17 @@ async function processItem(item, maxGxp, isFirstRun) {
     }
   }
 
-  if (!grouped.size) return null;
+  if (!grouped.size) {
+    // If no valid orders found (empty), but we have a lingering message, delete it.
+    if (ITEM_MSG_IDS.has(item.Name)) {
+      await deleteTelegramMessage(ITEM_MSG_IDS.get(item.Name));
+      ITEM_MSG_IDS.delete(item.Name);
+    }
+    return null;
+  }
 
   // Process findings and Compare with State
-  let newItemFound = false;
+  let anyNewItem = false;
   let itemMsg =
     "```\n" +
     `ITEM: ${item.Name}\n\n` +
@@ -187,42 +216,65 @@ async function processItem(item, maxGxp, isFirstRun) {
     // Update State
     MARKET_STATE.set(stateKey, currentQty);
 
-    let quantityToNotify = currentQty;
-
-    // Logic: 
-    // If first run, notify all (user asked "read all items").
-    // If next runs, notify only NEW quantity (current - previous).
-    // If current <= previous, it means no new items added (or successful sales occurred), so ignore.
-
-    if (!isFirstRun) {
-      if (currentQty > previousQty) {
-        quantityToNotify = currentQty - previousQty;
-      } else {
-        quantityToNotify = 0;
-      }
+    // Check if NEW items were added
+    if (currentQty > previousQty) {
+      anyNewItem = true;
     }
 
-    if (quantityToNotify > 0) {
-      newItemFound = true;
-      itemMsg +=
-        `${fmt(g.price).padStart(7)} | ` +
-        `${fmt(g.xp).padStart(4)} | ` +
-        `${(g.price / g.xp).toFixed(2).padStart(5)} | ` +
-        `${fmt(quantityToNotify).padStart(4)}\n`;
+    // Always show full quantity in message
+    itemMsg +=
+      `${fmt(g.price).padStart(7)} | ` +
+      `${fmt(g.xp).padStart(4)} | ` +
+      `${(g.price / g.xp).toFixed(2).padStart(5)} | ` +
+      `${fmt(currentQty).padStart(4)}\n`;
 
-      itemStats.expense += g.price * quantityToNotify;
-      itemStats.xp += g.xp * quantityToNotify;
-      itemStats.qty += quantityToNotify;
+    // Stats for summary (count only new items for the "Cycle Report" logic? 
+    // User logic: "New items found -> Update dashboard". 
+    // But specific "Stats" for the Summary Report usually imply "What I found/bought this cycle".
+    // For consistency with the dashboard logic (replacing messages), the Summary should probably also act as a Dashboard of "Current Active Offers"?
+    // Or strictly "New Findings Log"?
+    // The user kept "Relatório" (Report). Let's keep stats accumulation based on NEW items to trigger the "Something happened" logic,
+    // but maybe the Summary message itself should also replace the old one?
+    // Let's stick to accumulating NEW stats for the decision to ping.
+
+    if (currentQty > previousQty) {
+      const delta = currentQty - previousQty;
+      itemStats.expense += g.price * delta;
+      itemStats.xp += g.xp * delta;
+      itemStats.qty += delta;
     }
   }
 
   itemMsg += "```";
 
-  if (newItemFound) {
-    console.log(`Scan: ${item.Name} -> Novos itens encontrados!`);
-    await sendTelegram(itemMsg);
+  // LOGIC: Only send msg is NEW items found OR First Run
+  if (anyNewItem || isFirstRun) {
+    console.log(`Scan: ${item.Name} -> Novos itens/FirstRun`);
+
+    // 1. Delete old message if exists
+    if (ITEM_MSG_IDS.has(item.Name)) {
+      await deleteTelegramMessage(ITEM_MSG_IDS.get(item.Name));
+    }
+
+    // 2. Send new message
+    const msgId = await sendTelegram(itemMsg);
+
+    // 3. Save new message ID
+    if (msgId) ITEM_MSG_IDS.set(item.Name, msgId);
+
     return itemStats;
   }
+
+  // If NO new items, but we have 0 quantity now (Sold out?), we might want to delete the old message?
+  // Current logic: If 0 items, 'grouped' is likely empty, so we return null at line 170.
+  // Wait, if no sell orders, line 125 breaks. Line 170 returns null.
+  // If we return null, we don't handle the "Delete empty" logic.
+  // We need to handle the "Sold Out" case (Empty Grouped) inside the caller or here?
+  // Since 'grouped' is populated from API, if API returns empty, 'grouped' is empty.
+  // We should check ITEM_MSG_IDS for item.Name even if grouped is empty?
+  // The current structure returns early if grouped.size is 0. 
+  // Let's modify the caller or the early return? 
+  // Modifying the Early Return (Line 170) is safer.
 
   return null;
 }
@@ -281,13 +333,20 @@ async function run() {
 
       // Filter Report
       if (filterStats.qty > 0) {
-        await sendTelegram(
+        // Delete old summary for this filter
+        if (SUMMARY_MSG_IDS.has(filter)) {
+          await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
+        }
+
+        const summaryMsg =
           `📊 *RELATÓRIO: ${filter.toUpperCase()}*\n` +
           `💰 GASTO: ${fmt(filterStats.expense)}\n` +
           `✨ XP: ${fmt(filterStats.xp)}\n` +
-          `📦 QTD: ${fmt(filterStats.qty)}\n` +
-          `⚖️ MÉDIA G/XP: ${(filterStats.expense / filterStats.xp).toFixed(3)}`
-        );
+          `📦 QTD (Novos): ${fmt(filterStats.qty)}\n` + // Qty here implies NEW items found this cycle that triggered the update
+          `⚖️ MÉDIA G/XP: ${(filterStats.expense / filterStats.xp).toFixed(3)}`;
+
+        const sMsgId = await sendTelegram(summaryMsg);
+        if (sMsgId) SUMMARY_MSG_IDS.set(filter, sMsgId);
       }
     }
 
