@@ -251,16 +251,17 @@ async function processItem(item, maxGxp, isFirstRun) {
   if (anyNewItem || isFirstRun) {
     console.log(`Scan: ${item.Name} -> Novos itens/FirstRun`);
 
-    // 1. Delete old message if exists
-    if (ITEM_MSG_IDS.has(item.Name)) {
-      await deleteTelegramMessage(ITEM_MSG_IDS.get(item.Name));
-    }
-
-    // 2. Send new message
+    // 1. Send new message
     const msgId = await sendTelegram(itemMsg);
 
-    // 3. Save new message ID
-    if (msgId) ITEM_MSG_IDS.set(item.Name, msgId);
+    if (msgId) {
+      // 2. Delete old message if exists (only if new one was sent)
+      if (ITEM_MSG_IDS.has(item.Name)) {
+        await deleteTelegramMessage(ITEM_MSG_IDS.get(item.Name));
+      }
+      // 3. Save new message ID
+      ITEM_MSG_IDS.set(item.Name, msgId);
+    }
 
     return itemStats;
   }
@@ -295,7 +296,7 @@ async function run() {
     const subDisplay = sub === 'equipment' ? 'equip' : sub;
 
     // FILTROS IGNORADOS
-    if (cat === 'crafting' || cat === 'leatherworking') continue;
+    if (cat === 'crafting' || cat === 'leatherworking' || cat === 'cooking') continue;
     if (cat === 'forging' && subDisplay === 'equip') continue;
     if (cat === 'tailoring' && subDisplay === 'equip') continue;
 
@@ -333,11 +334,6 @@ async function run() {
 
       // Filter Report
       if (filterStats.qty > 0) {
-        // Delete old summary for this filter
-        if (SUMMARY_MSG_IDS.has(filter)) {
-          await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
-        }
-
         const summaryMsg =
           `📊 *RELATÓRIO: ${filter.toUpperCase()}*\n` +
           `💰 GASTO: ${fmt(filterStats.expense)}\n` +
@@ -346,7 +342,14 @@ async function run() {
           `⚖️ MÉDIA G/XP: ${(filterStats.expense / filterStats.xp).toFixed(3)}`;
 
         const sMsgId = await sendTelegram(summaryMsg);
-        if (sMsgId) SUMMARY_MSG_IDS.set(filter, sMsgId);
+
+        if (sMsgId) {
+          // Delete old summary for this filter only if new one sent
+          if (SUMMARY_MSG_IDS.has(filter)) {
+            await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
+          }
+          SUMMARY_MSG_IDS.set(filter, sMsgId);
+        }
       } else {
         // If NO items found for this filter, clean up old summary if exists
         if (SUMMARY_MSG_IDS.has(filter)) {
