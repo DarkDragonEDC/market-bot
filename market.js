@@ -283,7 +283,7 @@ async function processItem(item, maxGxp, isFirstRun) {
 // ================= RUN =================
 async function run() {
   console.log('=== BOT INICIADO ===');
-  const MAX_GXP = 2.0;
+  const MAX_GXP = 1.5;
 
   // 1. Group Items by Filter
   const groups = new Map(); // FilterString -> [Items]
