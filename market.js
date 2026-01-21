@@ -296,8 +296,7 @@ async function run() {
     const subDisplay = sub === 'equipment' ? 'equip' : sub;
 
     // FILTROS IGNORADOS
-    if (cat === 'crafting' || cat === 'leatherworking' || cat === 'cooking') continue;
-    if (cat === 'forging' && subDisplay === 'equip') continue;
+    if (cat === 'crafting' || cat === 'leatherworking' || cat === 'cooking' || cat === 'forging') continue;
     if (cat === 'tailoring' && subDisplay === 'equip') continue;
 
     const filterKey = `${cat} / ${subDisplay}`;
@@ -334,12 +333,14 @@ async function run() {
 
       // Filter Report
       if (filterStats.qty > 0) {
+        const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const summaryMsg =
           `📊 *RELATÓRIO: ${filter.toUpperCase()}*\n` +
           `💰 GASTO: ${fmt(filterStats.expense)}\n` +
           `✨ XP: ${fmt(filterStats.xp)}\n` +
-          `📦 QTD (Novos): ${fmt(filterStats.qty)}\n` + // Qty here implies NEW items found this cycle that triggered the update
-          `⚖️ MÉDIA G/XP: ${(filterStats.expense / filterStats.xp).toFixed(3)}`;
+          `📦 QTD (Novos): ${fmt(filterStats.qty)}\n` +
+          `⚖️ MÉDIA G/XP: ${(filterStats.expense / filterStats.xp).toFixed(3)}\n` +
+          `🕒 ATUALIZADO EM: ${now}`;
 
         const sMsgId = await sendTelegram(summaryMsg);
 
@@ -349,12 +350,6 @@ async function run() {
             await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
           }
           SUMMARY_MSG_IDS.set(filter, sMsgId);
-        }
-      } else {
-        // If NO items found for this filter, clean up old summary if exists
-        if (SUMMARY_MSG_IDS.has(filter)) {
-          await deleteTelegramMessage(SUMMARY_MSG_IDS.get(filter));
-          SUMMARY_MSG_IDS.delete(filter);
         }
       }
     }
