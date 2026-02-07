@@ -207,6 +207,7 @@ async function processItem(item, maxGxp, isFirstRun) {
     `--------+------+-------+------\n`;
 
   let itemStats = { expense: 0, xp: 0, qty: 0 };
+  let totalItemQty = 0;
 
   for (const [key, g] of grouped) {
     const stateKey = `${id}_${g.rarity}_${g.price}`;
@@ -243,9 +244,13 @@ async function processItem(item, maxGxp, isFirstRun) {
       itemStats.xp += g.xp * delta;
       itemStats.qty += delta;
     }
+    totalItemQty += currentQty;
   }
 
-  itemMsg += "```";
+  itemMsg += 
+    `--------+------+-------+------\n` +
+    `TOTAL QTY              | ${fmt(totalItemQty).padStart(4)}\n` +
+    "```";
 
   // LOGIC: Only send msg is NEW items found OR First Run
   if (anyNewItem || isFirstRun) {
